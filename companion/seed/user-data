@@ -1,0 +1,76 @@
+#cloud-config
+users:
+  - name: inferno
+    plain_text_passwd: inferno
+    lock_passwd: false
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    groups: sudo
+ssh_pwauth: true
+chpasswd:
+  expire: false
+package_update: true
+packages:
+  - build-essential
+  - autoconf
+  - automake
+  - libtool
+  - pkg-config
+  - git
+  - libssl-dev
+  - libusb-1.0-0-dev
+  - libcurl4-openssl-dev
+  - libzip-dev
+  - zlib1g-dev
+  - python3
+  - cython3
+  - python3-dev
+  - udev
+write_files:
+  - path: /usr/local/sbin/build-imobiledevice.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # ponytail: one script, sequential; parallel builds buy nothing here
+      set -euo pipefail
+      export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+      export LD_LIBRARY_PATH=/usr/local/lib
+      cd /opt && mkdir -p imd && cd imd
+      for r in libplist libimobiledevice-glue libusbmuxd libtatsu libimobiledevice libirecovery usbmuxd idevicerestore; do
+        [ -d "$r" ] || git clone --depth 1 "https://github.com/libimobiledevice/$r"
+      done
+      # idevicerestore needs the ChefKiss patch to complete the restore
+      if [ -f /opt/idevicerestore.patch ]; then
+        (cd idevicerestore && git apply --check /opt/idevicerestore.patch 2>/dev/null && git apply /opt/idevicerestore.patch || true)
+      fi
+      for r in libplist libimobiledevice-glue libusbmuxd libtatsu libimobiledevice libirecovery usbmuxd idevicerestore; do
+        echo "=== building $r"
+        cd "/opt/imd/$r"
+        ./autogen.sh
+        make -j"$(nproc)"
+        make install
+      done
+      ldconfig
+      echo 'u usbmux 140 "usbmux user"' > /usr/lib/sysusers.d/usbmuxd.conf
+      chmod 644 /usr/lib/sysusers.d/usbmuxd.conf
+      systemd-sysusers
+      udevadm control --reload-rules
+      systemctl daemon-reload
+      systemctl restart usbmuxd || true
+      touch /opt/IMD_BUILD_DONE
+  - path: /etc/systemd/system/mnt-inferno.mount
+    content: |
+      [Unit]
+      Description=InfernoData 9p share
+      [Mount]
+      What=inferno
+      Where=/mnt/inferno
+      Type=9p
+      Options=trans=virtio,version=9p2000.L,ro
+      [Install]
+      WantedBy=multi-user.target
+runcmd:
+  - [ mkdir, -p, /mnt/inferno ]
+  - [ systemctl, enable, --now, mnt-inferno.mount ]
+  - [ cp, /mnt/inferno/idevicerestore.patch, /opt/idevicerestore.patch ]
+  - [ bash, -lc, "/usr/local/sbin/build-imobiledevice.sh > /var/log/imd-build.log 2>&1" ]

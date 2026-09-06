@@ -1,0 +1,17 @@
+# Whitelist: tudo ignorado por padrão, só os scripts e o manual entram.
+# Nada de ipsw, discos, tickets, chaves ou firmware — o guia da ChefKiss
+# proíbe compartilhar qualquer um deles.
+*
+!.gitignore
+!README.md
+!inferno.sh
+!run-iphone.sh
+!run-companion.sh
+!patch-fs.sh
+!wait-and-restore.sh
+!companion/
+companion/*
+!companion/seed/
+companion/seed/*
+!companion/seed/user-data
+!companion/seed/meta-data
