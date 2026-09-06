@@ -1,5 +1,7 @@
 # Inferno no macOS Apple Silicon
 
+*Português · [English](README.en.md)*
+
 Scripts e manual para rodar o [Inferno](https://chefkiss.dev/guides/inferno/) da
 ChefKiss — um iPhone 11 (t8030) emulado — num Mac Apple Silicon.
 

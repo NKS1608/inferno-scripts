@@ -15,3 +15,4 @@ companion/*
 companion/seed/*
 !companion/seed/user-data
 !companion/seed/meta-data
+!README.en.md
